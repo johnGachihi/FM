@@ -1,0 +1,24 @@
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+*.log
+private_key.json
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Output folders
+results/
+tests/
