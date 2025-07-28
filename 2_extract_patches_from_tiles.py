@@ -51,7 +51,7 @@ SKIP_SINGLE_CLASS_PATCHES = False
 NUM_WORKERS  = multiprocessing.cpu_count() - 10
 SPLIT_RATIOS = {"train": 0.7, "val": 0.3}
 SEED = 42
-pratio = 0.06 # Pixel percentage with eiter valid data or labels in a patch to retain
+pratio = 0.05 # Pixel percentage with eiter valid data or labels in a patch to retain
 random.seed(SEED)
 
 # Prepare output dirs

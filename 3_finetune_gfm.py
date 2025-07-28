@@ -11,13 +11,13 @@ python 3_finetune_gfm.py \
 
 To run the model in server backgroung
 nohup python 3_finetune_gfm.py \
---data_dir /cluster/archiving/GIZ/data/patches_SB/ \
+--data_dir /cluster/archiving/GIZ/data/patches_25/ \
 --encoder_ckpt models/nano/ \
 --save_dir /cluster/archiving/GIZ/data/checkpoints/ \
 --batch_size 8 \
 --epochs 50 \
 --lr 0.0001 \
-> finetune_SB_with_2025.log  2>&1 &
+> finetune_allseasons_with_2025.log  2>&1 &
 '''
 
 import timeit
@@ -40,7 +40,7 @@ valid_labels = {0, 1, 2, 3} #XXXXXIndicate class labels in training data
 nsteps = 5         # 5 timesteps
 nbands = 12        # 2 (S1) + 10 (S2)
 nstatic = 11       # 1 (elevation) + 1 (slope) + 9 DW bands
-modelWeightsName = 'gfm_model_SB_with_2025.pt'
+modelWeightsName = 'gfm_model_with_2025.pt'
 
 class PixelwisePatchClassifier(nn.Module):
     def __init__(self, encoder: nn.Module, num_classes: int, freeze_encoder: bool = True):

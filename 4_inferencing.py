@@ -20,9 +20,9 @@ from pathlib import Path
 #from finetune_gfm_3 import PixelwisePatchClassifier
 
 # --- SETTINGS ---
-filename_ending = "SB_with_2025"
+filename_ending = "with_2025"
 model_filename = f'gfm_model_{filename_ending}.pt'
-district = "Nyagatare"
+district = "Musanze"
 num_classes = 4 #XXXXX
 root = '/cluster/archiving/GIZ/data/'
 eyear = 2025

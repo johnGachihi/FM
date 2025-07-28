@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # --- Load and parse the log file ---
-file_ending = 'SB_with_2025'
+file_ending = 'allseasons_with_2025'
 log_file = f'finetune_{file_ending}.log'  # <-- Replace with your actual log file pathFM/GFM_Galileo/finetune_allseasons_with_2025.log
 root = '/cluster/archiving/GIZ/data/outputs/'
 output_filename = f'{root}/Galileo_training_{file_ending}.png'

@@ -19,8 +19,8 @@ import seaborn as sns
 import pandas as pd
 
 # ---------- 1. Paths -------------------------------------------------
-outpath = '/cluster/archiving/GIZ/results/'
-file_ending = 'all_with_2025'
+outpath = '/cluster/archiving/GIZ/accuracy/'
+file_ending = 'with_2025'
 out_xlsx = f"{outpath}Galileo_accuracy_{file_ending}.xlsx"
 out_cmat = f"{outpath}Galileo_confmat_{file_ending}.png"
 out_f1sc = f"{outpath}Galileo_f1score_{file_ending}.png"
