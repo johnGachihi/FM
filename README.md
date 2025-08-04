@@ -27,6 +27,7 @@ conda activate galileo-env
 ## Dataset Preparation
 
 ### Step 0: Configure GEE
+- To create GEE service account see follow this [Tutorial](https://developers.google.com/earth-engine/guides/service_account). 
 - Place GEE service account key in the root directory in json format.
 - Configure the ee.batch.Export.image.toAsset() function in eo.py to your corresonding GEE assetid
 - Configure the name of project ID in EE_PROJECT vairable inside src/data/config.py to match project id name.
