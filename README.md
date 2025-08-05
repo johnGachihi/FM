@@ -1,5 +1,7 @@
 # GFM_Galileo
+
 Geospatial Foundation Model (GFM): Galileo
+
 # Galileo Pretrained Remote Sensing Model – Rwanda Crop Type Classification
 
 A fine-tuning pipeline for the **[Galileo Pretrained Remote Sensing Model](https://github.com/nasaharvest/galileo)** to classify crop types using pixel-wise segmentation with multi-temporal Sentinel-1 and Sentinel-2 data in Rwanda.
@@ -12,7 +14,7 @@ A fine-tuning pipeline for the **[Galileo Pretrained Remote Sensing Model](https
 
 ```bash
 git clone <repo-url>
-cd galileo
+cd FM
 ```
 
 ### 2. Create Environment
@@ -21,13 +23,14 @@ With **conda**:
 
 ```bash
 conda env create -f environment.yml
-conda activate galileo-env
+conda activate gfm-env
 ```
 
 ## Dataset Preparation
 
 ### Step 0: Configure GEE
-- To create GEE service account see follow this [Tutorial](https://developers.google.com/earth-engine/guides/service_account). 
+
+- To create GEE service account see follow this [Tutorial](https://developers.google.com/earth-engine/guides/service_account).
 - Place GEE service account key in the root directory in json format.
 - Configure the ee.batch.Export.image.toAsset() function in eo.py to your corresonding GEE assetid
 - Configure the name of project ID in EE_PROJECT vairable inside src/data/config.py to match project id name.
@@ -89,6 +92,7 @@ python 3_finetune_gfm.py \
   --epochs 50 \
   --lr 0.0001
 ```
+
 To run in server background.
 
 ```
@@ -101,6 +105,7 @@ To run in server background.
   --lr 0.0001 \
   > finetune.log 2>&1 &
 ```
+
 ## Inference
 
 Run inference on prepared raster tiles:
