@@ -84,8 +84,9 @@ TIME_DIV_VALUES = np.array(ERA5_DIV_VALUES + TC_DIV_VALUES + VIIRS_DIV_VALUES)
 
 ALL_DYNAMIC_IN_TIME_BANDS = SPACE_TIME_BANDS
 
-SPACE_BANDS = SRTM_BANDS + DW_BANDS + WC_BANDS
-SPACE_IMAGE_FUNCTIONS = [get_single_srtm_image, get_single_dw_image, get_single_wc_image]
+#SPACE_BANDS = SRTM_BANDS + DW_BANDS + WC_BANDS
+SPACE_BANDS = SRTM_BANDS + DW_BANDS
+SPACE_IMAGE_FUNCTIONS = [get_single_srtm_image, get_single_dw_image]#[get_single_srtm_image, get_single_dw_image, get_single_wc_image]
 SPACE_SHIFT_VALUES = np.array(SRTM_SHIFT_VALUES + DW_SHIFT_VALUES + WC_SHIFT_VALUES)
 SPACE_DIV_VALUES = np.array(SRTM_DIV_VALUES + DW_DIV_VALUES + WC_DIV_VALUES)
 
@@ -236,8 +237,32 @@ def create_ee_image(
     combine_bands_function = make_combine_bands_function(ALL_DYNAMIC_IN_TIME_BANDS)
     img = ee.Image(imcoll.iterate(combine_bands_function))
 
-    return ee.Image.cat([img])
+    # Create dynamic image (S1, S2 over time)
+    img = ee.Image(imcoll.iterate(combine_bands_function))
+    
+    # Add the SPACE TIM in time images
+    total_image_list: List[ee.Image] = [img]
+    for space_image_function in SPACE_IMAGE_FUNCTIONS:
+        total_image_list.append(
+            space_image_function(
+                region=polygon,
+                start_date=start_date - timedelta(days=31),
+                end_date=end_date + timedelta(days=31),
+            )
+        )
+    '''
+    ## Add the Static images
+    for static_image_function in STATIC_IMAGE_FUNCTIONS:
+        total_image_list.append(
+            static_image_function(
+                region=polygon,
+                start_date=start_date - timedelta(days=31),
+                end_date=end_date + timedelta(days=31),
+            )
+        )
+        '''
 
+    return ee.Image.cat(total_image_list)
 
 def get_ee_credentials():
     # Resolve path to project root
