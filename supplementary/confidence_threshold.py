@@ -73,11 +73,11 @@ for threshold in prob_thresholds:
                     dataset.write(mosaic)
                     out_image, _ = mask(dataset=dataset, shapes=geom, crop=True)
         except Exception as e:
-            print(f"❌ Masking failed for label {label}: {e}")
+            print(f"Masking failed for label {label}: {e}")
             continue
 
         if out_image.shape[0] != len(valid_classes):
-            print(f"⚠️ Unexpected band count for label {label}. Skipping.")
+            print(f"Unexpected band count for label {label}. Skipping.")
             continue
 
         probs = np.moveaxis(out_image, 0, -1)  # (H, W, C)
@@ -96,7 +96,7 @@ for threshold in prob_thresholds:
         all_gts.extend(y_true)
 
     if not all_preds:
-        print(f"⚠️ No predictions found at threshold {threshold}")
+        print(f"No predictions found at threshold {threshold}")
         continue
 
     cm = confusion_matrix(all_gts, all_preds, labels=valid_classes)

@@ -13,18 +13,21 @@ library(readxl)
 library(openxlsx)
 
 # ---------- 1. Paths -------------------------------------------------
-threshold <- 0.0
-outpath <- "/home/bkenduiywo/GFM_Galileo/results/"
-out_xlsx <- file.path(outpath, "Galileo_accuracy_with2025.xlsx")
-root <- "/cluster01/Projects/USA_IDA_AICCRA/1.Data/FINAL/Galileo/data/"
+threshold <- 0.6
+map_path <- '/cluster/archiving/GIZ/maps/'
+outpath = '/cluster/archiving/GIZ/accuracy/'
+name_end <- 'with_2025'
+file_ending = paste0('merged_probs_', name_end)
+out_xlsx = paste0(outpath,'Metrics_',file_ending,'_threshold_',threshold,'.xlsx')
+root = '/cluster/archiving/GIZ/data/'
 districts <- c("Ruhango", "Nyagatare", "Musanze", "Nyabihu")
 season <- "B"
 eyear <- 2025
 nodata_val <- 255
-classnames <- c('Bean', 'Irish Potato', 'Maize', 'Rice', 'Bean and Maize')
-nclasses <- 5
+classnames <- c('Bean', 'Irish Potato', 'Maize', 'Rice')
+nclasses <- 4
 
-raster_paths <- file.path(root, "outputs", paste0(districts, "_", season, eyear, "_merged_probs_with2025.tif"))
+raster_paths <- file.path(root, "outputs", paste0(districts, "_", season, eyear, "_", file_ending,".tif"))
 vector_path <- file.path(root, "shapefiles", paste0("RWA_", season, eyear, "_Merge_v1_ValidSet.shp"))
 
 # ---------- 2. Merge Rasters -----------------------------------------
@@ -51,6 +54,9 @@ final_class <- classify(c(predicted_class, max_prob),
 # Combine result: use mask to assign 255 where max_prob < threshold
 labels <- mask(predicted_class, max_prob < threshold, maskvalue=TRUE)
 names(labels) <- 'class'
+# Save labels to disk
+writeRaster(labels, paste0(map_path,'RWA_',season,eyear,'_threshold_',threshold,'_',name_end,'.tif'), overwrite = TRUE,
+            wopt = list(datatype = "INT1U", gdal = c("COMPRESS=DEFLATE")))
 
 
 # ---------- 3. Read Vector Data and Reproject ------------------------

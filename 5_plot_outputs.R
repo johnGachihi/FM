@@ -1,5 +1,5 @@
 library(terra)
-threshold <- 0.6
+threshold <- 0.7
 district = 'Nyabihu'
 season = 'B'
 eyear = '2025'

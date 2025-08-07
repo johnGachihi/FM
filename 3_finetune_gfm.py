@@ -40,7 +40,7 @@ valid_labels = {0, 1, 2, 3} #XXXXXIndicate class labels in training data
 nsteps = 5         # 5 timesteps
 nbands = 12        # 2 (S1) + 10 (S2)
 nstatic = 11       # 1 (elevation) + 1 (slope) + 9 DW bands
-modelWeightsName = 'gfm_model_with_2025.pt'
+modelWeightsName = 'test.pt'
 
 class PixelwisePatchClassifier(nn.Module):
     def __init__(self, encoder: nn.Module, num_classes: int, freeze_encoder: bool = True):
