@@ -87,14 +87,13 @@ SPACE_BAND_GROUPS_IDX: OrderedDictType[str, List[int]] = OrderedDict(
     {
         "SRTM": [SPACE_BANDS.index(b) for b in SRTM_BANDS],
         "DW": [SPACE_BANDS.index(b) for b in DW_BANDS],
-        #"WC": [SPACE_BANDS.index(b) for b in WC_BANDS], #COMMENT OUT TO REMOVE WC LAYER
+        "WC": [SPACE_BANDS.index(b) for b in WC_BANDS],
     }
 )
 
 STATIC_DW_BANDS = [f"{x}_static" for x in DW_BANDS]
 STATIC_WC_BANDS = [f"{x}_static" for x in WC_BANDS]
-STATIC_BANDS = EO_STATIC_BANDS + STATIC_DW_BANDS
-#STATIC_BANDS = EO_STATIC_BANDS + STATIC_DW_BANDS + STATIC_WC_BANDS
+STATIC_BANDS = EO_STATIC_BANDS + STATIC_DW_BANDS + STATIC_WC_BANDS
 STATIC_DIV_VALUES = np.append(EO_STATIC_DIV_VALUES, (DW_DIV_VALUES + WC_DIV_VALUES))
 STATIC_SHIFT_VALUES = np.append(EO_STATIC_SHIFT_VALUES, (DW_SHIFT_VALUES + WC_SHIFT_VALUES))
 
@@ -103,7 +102,7 @@ STATIC_BAND_GROUPS_IDX: OrderedDictType[str, List[int]] = OrderedDict(
         "LS": [STATIC_BANDS.index(b) for b in LANDSCAN_BANDS],
         "location": [STATIC_BANDS.index(b) for b in LOCATION_BANDS],
         "DW_static": [STATIC_BANDS.index(b) for b in STATIC_DW_BANDS],
-        #"WC_static": [STATIC_BANDS.index(b) for b in STATIC_WC_BANDS],
+        "WC_static": [STATIC_BANDS.index(b) for b in STATIC_WC_BANDS],
     }
 )
 
@@ -875,3 +874,5 @@ class PixelwisePatchDataset(Dataset):
             image, label_mask = self.transform(image, label_mask)
 
         return torch.tensor(image, dtype=torch.float32), torch.tensor(label_mask, dtype=torch.long)
+
+
