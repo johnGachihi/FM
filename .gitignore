@@ -1,3 +1,6 @@
+# TIFF files
+*.tif
+*.tiff
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints
 *.log
