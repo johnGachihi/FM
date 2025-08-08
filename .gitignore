@@ -11,6 +11,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Raster data (if not needed in repo)
+*.tif
+*.tiff
+
 # Virtual environments
 .venv/
 env/
@@ -22,3 +26,4 @@ venv.bak/
 # Output folders
 results/
 tests/
+

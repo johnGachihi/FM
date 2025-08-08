@@ -27,23 +27,23 @@ num_classes = 4 #XXXXX
 root = '/cluster/archiving/GIZ/data/'
 eyear = 2025
 season = "B"
+confidence_threshold = 0.5
 tile_folder = Path(f"{root}/{district}_{season}{eyear}_v2_tiles/")
 output_folder = Path(f"{root}outputs/{district}_tiles_{filename_ending}/")
 output_folder.mkdir(parents=True, exist_ok=True)
-final_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_labels_{filename_ending}.tif"
-masked_label_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_labels_{filename_ending}.tif"#"outputs/merged_prediction_masked.tif"
-final_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_probs_{filename_ending}.tif"
-masked_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_probs_{filename_ending}.tif"
+final_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_labels_{filename_ending}_threshold_{confidence_threshold}.tif"
+masked_label_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_labels_{filename_ending}_threshold_{confidence_threshold}.tif"
+final_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_probs_{filename_ending}_threshold_{confidence_threshold}.tif"
+masked_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_probs_{filename_ending}_threshold_{confidence_threshold}.tif"
 # Path to binary mask raster (0 and 1(retain value)
-mask_raster_path = f"{root}masks/ESA_crop_lands_only_mask.tif" #/cluster/archiving/GIZ/data/masks/
-
+#mask_raster_path = f"{root}masks/ESA_DW_cropland_mask_2025.tif" #/cluster/archiving/GIZ/data/masks/
+mask_raster_path = f"{root}masks/ESA_crop_lands_only_mask.tif"
 encoder_ckpt = "models/nano/"
 model_ckpt = f"/cluster/archiving/GIZ/data/checkpoints/{model_filename}" #Model directory
 patch_size = 8
 stride = 4
 device = "cuda" if torch.cuda.is_available() else "cpu"
 ignore_value = 255
-confidence_threshold = 0.0
 nsteps = 5 #number of months or steps
 nbands = 12 # number of bands
 nstatic = 11

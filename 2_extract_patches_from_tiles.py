@@ -1,11 +1,11 @@
-'''
-Original patch extraction logic enhanced to pad small polygons with IGNORE_VALUE, 
-ensuring no valuable labeled data is lost. In addition filter out patches labels or data with 
-no less than 4 pixels with available data.
-This version keeps the pixel-wise classification output format using .npz files.
-'''
+"""
+Original patch extraction logic enhanced to pad small polygons with IGNORE_VALUE,
+ensuring no valuable labeled data is lost. In addition, filters out patches
+with less than `pratio` pixels of available data or labels.
+Keeps the pixel-wise classification output format using .npz files.
+"""
+
 import timeit
-start_time = timeit.default_timer()
 import os
 import numpy as np
 import rasterio
@@ -20,9 +20,9 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import shutil
 
-print('Libraries initialized successfully')
+print("Libraries initialized successfully")
 
-# --------------------- CONFIG --------------------- 
+# --------------------- CONFIG ---------------------
 root = '/cluster/archiving/GIZ/'
 TILE_ROOTS = [ 
     ("RWA_B2025_Merge_v2_TrainSet", f"{root}data/Ruhango_B2025_v2_tiles"),
@@ -54,12 +54,6 @@ SEED = 42
 pratio = 0.05 # Pixel percentage with eiter valid data or labels in a patch to retain
 random.seed(SEED)
 
-# Prepare output dirs
-if os.path.exists(OUTPUT_DIR):
-    shutil.rmtree(OUTPUT_DIR)
-os.makedirs(OUTPUT_DIR)
-for split in SPLIT_RATIOS:
-    os.makedirs(os.path.join(OUTPUT_DIR, split), exist_ok=True)
 
 # --------------------- TILE PROCESSING FUNCTION ---------------------
 def process_tile(tile_path, vector_path):
@@ -75,14 +69,16 @@ def process_tile(tile_path, vector_path):
 
             gdf = gpd.read_file(vector_path).to_crs(crs)
             gdf = gdf[gdf.geometry.is_valid & gdf[LABEL_COLUMN].isin(VALID_LABELS)]
-            label_shapes = ((geom, int(attr)) for geom, attr in zip(gdf.geometry, gdf[LABEL_COLUMN]))
+            label_shapes = (
+                (geom, int(attr)) for geom, attr in zip(gdf.geometry, gdf[LABEL_COLUMN])
+            )
 
             label_raster = rasterize(
                 label_shapes,
                 out_shape=(height, width),
                 transform=transform,
                 fill=IGNORE_VALUE,
-                dtype=np.uint8
+                dtype=np.uint8,
             )
 
             for row in range(0, height, STRIDE):
@@ -90,24 +86,40 @@ def process_tile(tile_path, vector_path):
                     end_row = min(row + PATCH_SIZE, height)
                     end_col = min(col + PATCH_SIZE, width)
 
-                    image_patch = src.read(window=Window(col, row, end_col - col, end_row - row))
+                    image_patch = src.read(
+                        window=Window(col, row, end_col - col, end_row - row)
+                    )
                     label_patch = label_raster[row:end_row, col:end_col]
 
                     # Pad if near edges
                     pad_h = PATCH_SIZE - image_patch.shape[1]
                     pad_w = PATCH_SIZE - image_patch.shape[2]
                     if pad_h > 0 or pad_w > 0:
-                        image_patch = np.pad(image_patch, ((0, 0), (0, pad_h), (0, pad_w)), constant_values=NODATA_VALUE)
-                        label_patch = np.pad(label_patch, ((0, pad_h), (0, pad_w)), constant_values=IGNORE_VALUE)
+                        image_patch = np.pad(
+                            image_patch,
+                            ((0, 0), (0, pad_h), (0, pad_w)),
+                            constant_values=NODATA_VALUE,
+                        )
+                        label_patch = np.pad(
+                            label_patch,
+                            ((0, pad_h), (0, pad_w)),
+                            constant_values=IGNORE_VALUE,
+                        )
 
                     # Compute valid pixel ratios
-                    image_valid_ratio = np.sum(np.any(image_patch != NODATA_VALUE, axis=0)) / (PATCH_SIZE * PATCH_SIZE)
-                    label_valid_ratio = np.sum(label_patch != IGNORE_VALUE) / (PATCH_SIZE * PATCH_SIZE)
+                    image_valid_ratio = np.sum(
+                        np.any(image_patch != NODATA_VALUE, axis=0)
+                    ) / (PATCH_SIZE * PATCH_SIZE)
+                    label_valid_ratio = np.sum(
+                        label_patch != IGNORE_VALUE
+                    ) / (PATCH_SIZE * PATCH_SIZE)
 
                     if image_valid_ratio < pratio or label_valid_ratio < pratio:
                         continue
-                    #Reset NODATA_VALUE to 0 for retained patches
+
+                    # Reset NODATA_VALUE to 0 for retained patches
                     image_patch[image_patch == NODATA_VALUE] = 0
+
                     valid_pixels = label_patch[label_patch != IGNORE_VALUE]
                     if len(valid_pixels) == 0:
                         continue
@@ -129,60 +141,94 @@ def process_tile(tile_path, vector_path):
 
     return result, local_distribution, multi_label_count
 
-# --------------------- MAIN LOOP ---------------------
-print("Collecting patches from all seasons...")
-class_distribution = Counter()
-multi_label_patch_count = 0
-class_to_patches = defaultdict(list)
 
-for season_id, tile_dir in TILE_ROOTS:
-    print(f"\nProcessing {season_id}")
-    vector_path = os.path.join(SHAPEFILE_DIR, f"{season_id}.shp")
+# MAIN PROCESS
+def main():
+    start_time = timeit.default_timer()
 
-    if not os.path.exists(vector_path):
-        print(f"[WARNING] Missing shapefile: {vector_path}")
-        continue
+    # Prepare output dirs
+    if os.path.exists(OUTPUT_DIR):
+        shutil.rmtree(OUTPUT_DIR)
+    os.makedirs(OUTPUT_DIR)
+    for split in SPLIT_RATIOS:
+        os.makedirs(os.path.join(OUTPUT_DIR, split), exist_ok=True)
 
-    tile_files = [f for f in os.listdir(tile_dir) if f.endswith(".tif")]
+    print("Collecting patches from all seasons...")
+    class_distribution = Counter()
+    multi_label_patch_count = 0
+    class_to_patches = defaultdict(list)
 
-    with ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
-        futures = [executor.submit(process_tile, os.path.join(tile_dir, tile_file), vector_path)
-                   for tile_file in tile_files]
+    for season_id, tile_dir in TILE_ROOTS:
+        print(f"\nProcessing {season_id}")
+        vector_path = os.path.join(SHAPEFILE_DIR, f"{season_id}.shp")
 
-        for future in tqdm(as_completed(futures), total=len(futures), desc=f"Processing {season_id}"):
-            tile_result, tile_distribution, tile_multi_label = future.result()
-            for k, v in tile_result.items():
-                class_to_patches[k].extend(v)
-            class_distribution.update(tile_distribution)
-            multi_label_patch_count += tile_multi_label
+        if not os.path.exists(vector_path):
+            print(f"[WARNING] Missing shapefile: {vector_path}")
+            continue
 
-# --------------------- SPLIT BY CLASS ---------------------
-print(f"\nTotal patches collected: {sum(len(p) for p in class_to_patches.values())}")
-print(f"Multi-class patches: {multi_label_patch_count}")
-print("Class pixel distribution across patches (not pixel count):")
-for cls, count in sorted(class_distribution.items()):
-    print(f"  Class {cls}: {count} patches contain this label")
+        tile_files = [f for f in os.listdir(tile_dir) if f.endswith(".tif")]
 
-balanced_splits = {"train": [], "val": []}
+        with ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            futures = [
+                executor.submit(
+                    process_tile, os.path.join(tile_dir, tile_file), vector_path
+                )
+                for tile_file in tile_files
+            ]
 
-for cls, patches in class_to_patches.items():
-    train, val = train_test_split(
-        patches,
-        train_size=SPLIT_RATIOS["train"],
-        test_size=SPLIT_RATIOS["val"],
-        random_state=SEED
+            for future in tqdm(
+                as_completed(futures), total=len(futures), desc=f"Processing {season_id}"
+            ):
+                tile_result, tile_distribution, tile_multi_label = future.result()
+                for k, v in tile_result.items():
+                    class_to_patches[k].extend(v)
+                class_distribution.update(tile_distribution)
+                multi_label_patch_count += tile_multi_label
+
+    # SPLIT BY CLASS
+    print(
+        f"\nTotal patches collected: {sum(len(p) for p in class_to_patches.values())}"
     )
-    balanced_splits["train"].extend(train)
-    balanced_splits["val"].extend(val)
+    print(f"Multi-class patches: {multi_label_patch_count}")
+    print("Class pixel distribution across patches (not pixel count):")
+    for cls, count in sorted(class_distribution.items()):
+        print(f"  Class {cls}: {count} patches contain this label")
 
-# --------------------- SAVE PATCHES ---------------------
-for split, items in balanced_splits.items():
-    for i, (image, label) in enumerate(items):
-        out_path = os.path.join(OUTPUT_DIR, split, f"patch_{split}_{i:05d}.npz")
-        np.savez_compressed(out_path, image=image.astype(np.float32), mask=label.astype(np.uint8))
+    balanced_splits = {"train": [], "val": []}
 
-print("\nBalanced patches saved to:", OUTPUT_DIR)
-print("Done! Elapsed time (hours):", (timeit.default_timer() - start_time) / 3600.0)
+    for cls, patches in class_to_patches.items():
+        train, val = train_test_split(
+            patches,
+            train_size=SPLIT_RATIOS["train"],
+            test_size=SPLIT_RATIOS["val"],
+            random_state=SEED,
+        )
+        balanced_splits["train"].extend(train)
+        balanced_splits["val"].extend(val)
+
+    # SAVE PATCHES
+    for split, items in balanced_splits.items():
+        for i, (image, label) in enumerate(items):
+            out_path = os.path.join(
+                OUTPUT_DIR, split, f"patch_{split}_{i:05d}.npz"
+            )
+            np.savez_compressed(
+                out_path,
+                image=image.astype(np.float32),
+                mask=label.astype(np.uint8),
+            )
+
+    print("\nBalanced patches saved to:", OUTPUT_DIR)
+    print(
+        "Done! Elapsed time (hours):",
+        (timeit.default_timer() - start_time) / 3600.0,
+    )
+
+
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    main()
+
 
 
 ## BEFORE MODIFYING CODE TO ACCEPT POLYGONS LESS THAN 8by8 Pixels XXXXXXX
