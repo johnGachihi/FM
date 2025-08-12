@@ -13,7 +13,6 @@ from shapely.geometry import box
 # ------------------------------
 # User Inputs
 # ------------------------------
-district = "Nyagatare"
 eyear = 2025
 season = "B"
 outpath = '/cluster/archiving/GIZ/confidence/'

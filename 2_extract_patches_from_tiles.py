@@ -4,7 +4,10 @@ ensuring no valuable labeled data is lost. In addition, filters out patches
 with less than `pratio` pixels of available data or labels.
 Keeps the pixel-wise classification output format using .npz files.
 """
-
+# ------------------------------------------------------------
+# Author: Joseph Chemut and Benson Kenduiywo
+# Accuracy assessment using pre-rasterized reference labels
+# ------------------------------------------------------------
 import timeit
 import os
 import numpy as np

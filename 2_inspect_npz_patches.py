@@ -1,3 +1,7 @@
+# ------------------------------------------------------------
+# Author: Joseph Chemut 
+# Accuracy assessment using pre-rasterized reference labels
+# ------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
 

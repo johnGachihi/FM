@@ -11,15 +11,18 @@ python 3_finetune_gfm.py \
 
 To run the model in server backgroung
 nohup python 3_finetune_gfm.py \
---data_dir /cluster/archiving/GIZ/data/patches_25/ \
+--data_dir /cluster/archiving/GIZ/data/patches_SB/ \
 --encoder_ckpt models/nano/ \
 --save_dir /cluster/archiving/GIZ/data/checkpoints/ \
 --batch_size 8 \
 --epochs 50 \
 --lr 0.0001 \
-> finetune_allseasons_with_2025.log  2>&1 &
+> finetune_SB_with_2025.log  2>&1 &
 '''
-
+# ------------------------------------------------------------
+# Author: Joseph Chemut and Benson Kenduiywo
+# Accuracy assessment using pre-rasterized reference labels
+# ------------------------------------------------------------
 import timeit
 start_time = timeit.default_timer()
 import argparse

@@ -1,3 +1,7 @@
+# ------------------------------------------------------------
+# Author: Joseph Chemut and Benson Kenduiywo
+# Accuracy assessment using pre-rasterized reference labels
+# ------------------------------------------------------------
 # run_export_rwanda.py
 import timeit
 start_time = timeit.default_timer()

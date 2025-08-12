@@ -22,11 +22,11 @@ import os
 districts = ["Ruhango", "Nyagatare", "Musanze", "Nyabihu"]
 eyear = 2025
 season = "B"
-file_ending = 'merged_probs_with_2025'
+file_ending = 'merged_probs_SB_with_2025'
 root = '/cluster/archiving/GIZ/data/'
 outpath = f'/cluster/archiving/GIZ/accuracy/'
 vector_path = f'{root}shapefiles/RWA_{season}{eyear}_Merge_v2_ValidSet.shp'
-prob_threshold = 0.7
+prob_threshold = 0.5
 out_xlsx = f'{outpath}Metrics_{file_ending}_threshold_{prob_threshold}.xlsx'
 out_f1sc =  f'{outpath}F1Score_{file_ending}_threshold_{prob_threshold}.png'
 out_cmat = f'{outpath}Confmat_{file_ending}_threshold_{prob_threshold}.png'

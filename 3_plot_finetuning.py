@@ -1,3 +1,7 @@
+# ------------------------------------------------------------
+# Author: Benson Kenduiywo
+# Accuracy assessment using pre-rasterized reference labels
+# ------------------------------------------------------------
 import timeit
 start_time = timeit.default_timer()
 import re
@@ -5,10 +9,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # --- Load and parse the log file ---
-file_ending = 'allseasons_with_2025'
+file_ending = 'SB_with_2025' #SB_with_2025.log or allseasons_with_2025.log
 log_file = f'finetune_{file_ending}.log'  # <-- Replace with your actual log file pathFM/GFM_Galileo/finetune_allseasons_with_2025.log
-root = '/cluster/archiving/GIZ/data/outputs/'
-output_filename = f'{root}/Galileo_training_{file_ending}.png'
+root = '/cluster/archiving/GIZ/accuracy/'
+output_filename = f'{root}/Galileo_GFM_training_{file_ending}.png'
+output_csv = f'{root}/Galileo_GFM_training_{file_ending}.csv'
 
 pattern = re.compile(
     r"\[Epoch (\d+)\] LR: ([0-9.]+), Train Loss = ([0-9.]+), Train Acc = ([0-9.]+), Val Acc = ([0-9.]+), Val mIoU = ([0-9.]+)"
@@ -32,6 +37,8 @@ with open(log_file, 'r') as f:
 
 df = pd.DataFrame(data)
 print(f"Training data log\nHead:\n{df.head()}\nTail:\n{df.tail()}", flush=True)
+df.to_csv(output_csv, index=False)
+print('csv saved to: ', output_csv, flush=True)
 
 # --- Plotting ---
 plt.style.use('seaborn-v0_8-darkgrid')

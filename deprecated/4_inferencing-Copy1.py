@@ -1,7 +1,3 @@
-# ------------------------------------------------------------
-# Author: Joseph Chemut and Benson Kenduiywo
-# Accuracy assessment using pre-rasterized reference labels
-# ------------------------------------------------------------
 import timeit
 start_time = timeit.default_timer()
 import os
@@ -31,14 +27,14 @@ num_classes = 4 #XXXXX
 root = '/cluster/archiving/GIZ/data/'
 eyear = 2025
 season = "B"
-confidence_threshold = 0.0
+confidence_threshold = 0.5
 tile_folder = Path(f"{root}/{district}_{season}{eyear}_v2_tiles/")
 output_folder = Path(f"{root}outputs/{district}_tiles_{filename_ending}/")
 output_folder.mkdir(parents=True, exist_ok=True)
-final_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_labels_{filename_ending}.tif" #f"{root}outputs/{district}_{season}{eyear}_merged_labels_{filename_ending}_threshold_{confidence_threshold}.tif"
-masked_label_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_labels_{filename_ending}.tif"
-final_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_probs_{filename_ending}.tif"
-masked_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_probs_{filename_ending}.tif"
+final_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_labels_{filename_ending}_threshold_{confidence_threshold}.tif"
+masked_label_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_labels_{filename_ending}_threshold_{confidence_threshold}.tif"
+final_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_probs_{filename_ending}_threshold_{confidence_threshold}.tif"
+masked_prob_output_path = f"{root}outputs/{district}_{season}{eyear}_merged_masked_probs_{filename_ending}_threshold_{confidence_threshold}.tif"
 # Path to binary mask raster (0 and 1(retain value)
 #mask_raster_path = f"{root}masks/ESA_DW_cropland_mask_2025.tif" #/cluster/archiving/GIZ/data/masks/
 mask_raster_path = f"{root}masks/ESA_crop_lands_only_mask.tif"
@@ -51,8 +47,8 @@ ignore_value = 255
 nsteps = 5 #number of months or steps
 nbands = 12 # number of bands
 nstatic = 11
-NODATA_VALUE = -9999
 
+####C
 class PixelwisePatchClassifier(nn.Module):
     def __init__(self, encoder: nn.Module, num_classes: int, freeze_encoder: bool = True):
         super().__init__()
@@ -137,161 +133,118 @@ print(f"[INFO] Found {len(tile_paths)} tiles.")
 for tile_path in tqdm(tile_paths, desc="Processing tiles"):
     print(f"[DEBUG] Processing tile: {tile_path.name}")
     with rasterio.open(tile_path) as src:
-        image = src.read().astype(np.float32)   # [C, H, W]
-        base_profile = src.profile.copy()       # clean copy for outputs
+        image = src.read()  # [C=60, H, W]
+        profile = src.profile
         H, W = image.shape[1:]
 
-    print(f"[DEBUG] Tile shape: {image.shape}")
-    expected_channels = nsteps * nbands + nstatic  # 71
-    if image.shape[0] != expected_channels:
-        raise ValueError(
-            f"[ERROR] Tile must have {expected_channels} channels "
-            f"({nsteps} timesteps x {nbands} bands + {nstatic}). Got {image.shape[0]}"
-        )
+        print(f"[DEBUG] Tile shape: {image.shape}")
+        expected_channels = nsteps * nbands + nstatic  # 71
+        if image.shape[0] != expected_channels:
+            raise ValueError(f"[ERROR] Tile must have {expected_channels} channels ({nsteps} timesteps x {nbands} bands + {nstatic}). Got {image.shape[0]}")
 
-    # --- Pad to multiples of patch_size ---
-    pad_h = (patch_size - H % patch_size) % patch_size
-    pad_w = (patch_size - W % patch_size) % patch_size
-    image_padded = np.pad(image, ((0, 0), (0, pad_h), (0, pad_w)), mode="reflect")
-    H_pad, W_pad = image_padded.shape[1:]
-    print(f"[DEBUG] Padded tile shape: {image_padded.shape}")
+        # Pad tile if needed
+        pad_h = (patch_size - H % patch_size) % patch_size
+        pad_w = (patch_size - W % patch_size) % patch_size
+        image_padded = np.pad(image, ((0, 0), (0, pad_h), (0, pad_w)), mode='reflect')
+        H_pad, W_pad = image_padded.shape[1:]
+        print(f"[DEBUG] Padded tile shape: {image_padded.shape}")
 
-    # --- Hann feathering windows (downweight patch edges) ---
-    win_h, win_w = patch_size, patch_size
-    w1h = np.hanning(win_h).astype(np.float32)
-    w1w = np.hanning(win_w).astype(np.float32)
-    w2  = np.outer(w1h, w1w).astype(np.float32)
-    win = (w2 / (w2.max() + 1e-8)).astype(np.float32)                 # [ps, ps] ∈ [0..1]
-    win_c = np.broadcast_to(win, (num_classes, win_h, win_w))         # [C, ps, ps]
+        pred_map = np.zeros((num_classes, H_pad, W_pad), dtype=np.float32)
+        count_map = np.zeros((H_pad, W_pad), dtype=np.uint8)
 
-    # --- Accumulators ---
-    pred_map   = np.zeros((num_classes, H_pad, W_pad), dtype=np.float32)
-    weight_map = np.zeros((H_pad, W_pad), dtype=np.float32)
+        # Slide window and infer
+        for y in range(0, H_pad - patch_size + 1, stride):
+            for x in range(0, W_pad - patch_size + 1, stride):
+                patch = image_padded[:, y:y+patch_size, x:x+patch_size]  # [60, 8, 8]
 
-    # --- Slide window + infer ---
-    for y in range(0, H_pad - patch_size + 1, stride):
-        for x in range(0, W_pad - patch_size + 1, stride):
-            patch = image_padded[:, y:y+patch_size, x:x+patch_size]  # [C=71, ps, ps]
+                # Split into temporal and static
+                temporal = patch[:nsteps * nbands]  # shape [60, H, W]
+                static = patch[nsteps * nbands:]    # shape [11, H, W]
 
-            # Split temporal/static
-            temporal = patch[:nsteps * nbands]                       # [60, ps, ps]
-            static   = patch[nsteps * nbands:]                       # [11, ps, ps]
+                # Reshape temporal to [T, B, H, W] → then to [H, W, T, B]
+                temporal = temporal.reshape(nsteps, nbands, patch_size, patch_size).transpose(0, 2, 3, 1)  # [5, 8, 8, 12]
+                s1 = temporal[..., :2].transpose(1, 2, 0, 3)  # [8, 8, 5, 2]
+                s2 = temporal[..., 2:].transpose(1, 2, 0, 3)  # [8, 8, 5, 10]
 
-            # Reshape temporal [T, B, H, W] -> [H, W, T, B]
-            temporal = temporal.reshape(nsteps, nbands, patch_size, patch_size).transpose(0, 2, 3, 1)  # [5, ps, ps, 12]
-            s1 = temporal[..., :2].transpose(1, 2, 0, 3)   # [ps, ps, 5, 2]
-            s2 = temporal[..., 2:].transpose(1, 2, 0, 3)   # [ps, ps, 5, 10]
+                # Static bands
+                srtm = static[:2].transpose(1, 2, 0)  # [8, 8, 2]
+                dw = static[2:].transpose(1, 2, 0)    # [8, 8, 9]
 
-            # Static
-            srtm = static[:2].transpose(1, 2, 0)           # [ps, ps, 2]
-            dw   = static[2:].transpose(1, 2, 0)           # [ps, ps, 9]
+                # Convert to tensors
+                s1 = torch.from_numpy(s1).float()
+                s2 = torch.from_numpy(s2).float()
+                srtm = torch.from_numpy(srtm).float()
+                dw = torch.from_numpy(dw).float()
 
-            # Tensors
-            s1 = torch.from_numpy(s1).float()
-            s2 = torch.from_numpy(s2).float()
-            srtm = torch.from_numpy(srtm).float()
-            dw = torch.from_numpy(dw).float()
+                # Construct Galileo input
+                masked = construct_galileo_input(s1=s1, s2=s2, srtm=srtm, dw=dw, normalize=True)
 
-            # Galileo input (keep your normalization choice)
-            masked = construct_galileo_input(s1=s1, s2=s2, srtm=srtm, dw=dw, normalize=True)
+                batched_input = {
+                    k: torch.stack([getattr(masked, k).float() if k != "months" else getattr(masked, k).long()])
+                    for k in masked._fields
+                }
+                batched_input = {k: v.to(device) for k, v in batched_input.items()}
 
-            batched_input = {
-                k: torch.stack([getattr(masked, k).float() if k != "months" else getattr(masked, k).long()])
-                for k in masked._fields
-            }
-            batched_input = {k: v.to(device) for k, v in batched_input.items()}
+                with torch.no_grad():
+                    feats, *_ = encoder(
+                        batched_input["space_time_x"],
+                        batched_input["space_x"],
+                        batched_input["time_x"],
+                        batched_input["static_x"],
+                        batched_input["space_time_mask"],
+                        batched_input["space_mask"],
+                        batched_input["time_mask"],
+                        batched_input["static_mask"],
+                        batched_input["months"],
+                        patch_size=patch_size,
+                    )
+                    feats = feats.squeeze(1)[:, -1, :, :, :]  # [1, C, H, W]
+                    feats = feats.permute(0, 3, 1, 2).contiguous()
+                    logits = model.classifier(feats)
 
-            with torch.no_grad():
-                feats, *_ = encoder(
-                    batched_input["space_time_x"],
-                    batched_input["space_x"],
-                    batched_input["time_x"],
-                    batched_input["static_x"],
-                    batched_input["space_time_mask"],
-                    batched_input["space_mask"],
-                    batched_input["time_mask"],
-                    batched_input["static_mask"],
-                    batched_input["months"],
-                    patch_size=patch_size,
-                )
-                feats = feats.squeeze(1)[:, -1, :, :, :]      # [1, C, ps, ps]
-                feats = feats.permute(0, 3, 1, 2).contiguous() # [1, C, ps, ps]
-                logits = model.classifier(feats)               # [1, num_classes, h, w]
+                    probs = torch.softmax(logits, dim=1)
+                    probs = F.interpolate(probs, size=(patch_size, patch_size), mode='bilinear', align_corners=False)
+                    probs = probs.squeeze(0).cpu().numpy()  # [num_classes, 8, 8]
 
-                probs = torch.softmax(logits, dim=1)           # [1, C, h, w]
-                # Force to (ps, ps) if needed (prevents broadcast errors)
-                if probs.shape[-2:] != (patch_size, patch_size):
-                    probs = F.interpolate(probs, size=(patch_size, patch_size),
-                                          mode="bilinear", align_corners=False)
-                probs = probs.squeeze(0).cpu().numpy()         # [C, ps, ps]
+                pred_map[:, y:y+patch_size, x:x+patch_size] += probs
+                count_map[y:y+patch_size, x:x+patch_size] += 1
 
-            # Feathered accumulation
-            pred_map[:, y:y+patch_size, x:x+patch_size] += probs * win_c
-            weight_map[y:y+patch_size, x:x+patch_size]  += win
+        # --- Generate final prediction mask ---
+        avg_probs = pred_map / np.clip(count_map, a_min=1, a_max=None)
+        confidence = np.max(avg_probs, axis=0)
+        final_mask = np.argmax(avg_probs, axis=0).astype(np.uint8)
 
-    # --- Final avg probs, labels, confidence ---
-    avg_probs = pred_map / np.clip(weight_map, 1e-6, None)   # [C, H_pad, W_pad]
-    np.clip(avg_probs, 0.0, 1.0, out=avg_probs)              # optional clamp
+        # Create valid data mask from original (unpadded) image
+        valid_data_mask = np.isfinite(image).all(axis=0) & (np.abs(image).sum(axis=0) >= 1e-6)
+        valid_data_mask_padded = np.pad(valid_data_mask, ((0, pad_h), (0, pad_w)), mode='constant', constant_values=False)
 
-    confidence = np.nanmax(avg_probs, axis=0)
-    # argmax that ignores NaNs by replacing with -inf
-    final_mask = np.nanargmax(np.where(np.isfinite(avg_probs), avg_probs, -np.inf), axis=0).astype(np.uint8)
+        # Combine conditions: low confidence, no overlapping patches, or invalid input
+        mask_low_conf = (confidence < confidence_threshold) | (count_map == 0) | (~valid_data_mask_padded)
+        final_mask[mask_low_conf] = ignore_value
 
-    # Valid data mask from original (unpadded) image
-    valid_data_mask = np.isfinite(image).all(axis=0) & (np.abs(image).sum(axis=0) >= 1e-6)
-    valid_data_mask_padded = np.pad(valid_data_mask, ((0, pad_h), (0, pad_w)), mode="constant", constant_values=False)
+        # Remove padding from final labels
+        final_mask = final_mask[:H, :W]
 
-    # Low-confidence or zero-weight pixels are ignored
-    mask_low_conf = (confidence < confidence_threshold) | (weight_map <= 1e-6) | (~valid_data_mask_padded)
-    final_mask[mask_low_conf] = ignore_value
+        ignore_ratio = (final_mask == ignore_value).sum() / final_mask.size
+        
+        # --- Save prediction mask ---
+        out_tile_path = output_folder / tile_path.name.replace(".tif", "_pred.tif")
+        profile.update(count=1, dtype='uint8', height=H, width=W)
+        with rasterio.open(out_tile_path, "w", **profile) as dst:
+            dst.write(final_mask, 1)
 
-    # --- Trim padding ---
-    final_mask = final_mask[:H, :W]
-    avg_probs  = avg_probs[:, :H, :W].astype(np.float32)
+        pred_tiles.append(out_tile_path)
 
-    # --- Save prediction mask (labels) ---
-    out_tile_path = output_folder / tile_path.name.replace(".tif", "_pred.tif")
-    label_profile = base_profile.copy()
-    label_profile.update({
-        "driver": "GTiff",
-        "count": 1,
-        "dtype": "uint8",
-        "height": H,
-        "width": W,
-        "compress": "deflate",
-        "tiled": True,
-        "nodata": ignore_value,
-    })
-    with rasterio.open(out_tile_path, "w", **label_profile) as dst:
-        dst.write(final_mask, 1)
-    pred_tiles.append(out_tile_path)
+        # --- Save pixel-wise class probabilities ---
+        probs_tile_path = output_folder / tile_path.name.replace(".tif", "_probs.tif")
+        prob_profile = profile.copy()
+        prob_profile.update(count=num_classes, dtype='float32', height=H, width=W)
 
-    # --- Save pixel-wise class probabilities ---
-    probs_tile_path = output_folder / tile_path.name.replace(".tif", "_probs.tif")
-    prob_profile = base_profile.copy()
-    for k in ("photometric", "colormap"):
-        if k in prob_profile:
-            prob_profile.pop(k)
-    prob_profile.update({
-        "driver": "GTiff",
-        "count": num_classes,
-        "dtype": "float32",
-        "height": H,
-        "width": W,
-        "compress": "deflate",
-        "tiled": True,
-        "nodata": NODATA_VALUE,#np.float32(np.nan),
-    })
-    with rasterio.open(probs_tile_path, "w", **prob_profile) as dst_prob:
-        dst_prob.write(avg_probs)
-#Add colour legend
-color_map = {
-    0: (85, 255, 0),     # #55FF00
-    1: (115, 38, 0),     # #732600
-    2: (255, 212, 0),    # #FFD400
-    3: (0, 169, 230),    # #00A9E6
-    255: (0, 0, 0)       # IGNORE_VALUE (black)
-}
+        # Remove padding from avg_probs
+        avg_probs = avg_probs[:, :H, :W]
+
+        with rasterio.open(probs_tile_path, "w", **prob_profile) as dst_prob:
+            dst_prob.write(avg_probs.astype(np.float32))
 
 # --- Merge predicted/labels tiles ---
 srcs = [rasterio.open(p) for p in pred_tiles]
@@ -303,18 +256,14 @@ profile.update({
     "width": mosaic.shape[2],
     "transform": out_transform,
     "count": 1,
-    "dtype": "uint8",
-    "nodata": ignore_value,
-    "compress": "DEFLATE"
+    "dtype": "uint8"
 })
 
 with rasterio.open(final_output_path, "w", **profile) as dst:
     dst.write(mosaic.astype(np.uint8))
-    dst.write_colormap(1, color_map)
 
 print(f"[INFO] Merged prediction saved to: {final_output_path}")
 
-'''
 ###MASK OUT NON CROP AREAS from classification===========================================
 # ───────────────────────────────────────────────────────────────
 # 1. Load mask raster
@@ -416,7 +365,7 @@ gdal.Warp(
     format="GTiff",
     options=gdal.WarpOptions(
         resampleAlg="average",          # <-- averages overlapping pixels
-        dstNodata=NODATA_VALUE,#"nan",                # keep NaN as nodata (float32)
+        dstNodata="nan",                # keep NaN as nodata (float32)
         creationOptions=[
             "COMPRESS=DEFLATE",         # better for float32
             "PREDICTOR=3",
@@ -466,7 +415,7 @@ with rasterio.open(masked_prob_output_path, "w", **prob_profile) as dst:
     dst.write(masked_probs.astype(np.float32))
 
 print(f"[INFO] Masked probabilities saved to: {masked_prob_output_path}")
-'''
+
 
 print("Done! Elapsed time (hours):", (timeit.default_timer() - start_time) / 3600.0)
 

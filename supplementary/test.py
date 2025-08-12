@@ -27,7 +27,7 @@ output_label_path = f"{district}_{season}{eyear}_masked_labels_{filename_ending}
 
 # Parameters
 ignore_value = 255
-confidence_threshold = 0.5
+confidence_threshold = 0.6
 
 def clip_raster(input_path, aoi_path, district):
     # Validate inputs
