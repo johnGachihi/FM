@@ -1,3 +1,7 @@
+# ------------------------------------------------------------
+# Author: Benson Kenduiywo
+# CRF
+# ------------------------------------------------------------
 import timeit
 start_time = timeit.default_timer()
 import numpy as np
@@ -11,9 +15,9 @@ import os
 # Global variables
 beta = 1.0
 epsilon = 1e-10
-district = "Musanze"
+district = "Nyagatare"
 root = '/cluster/archiving/GIZ/data/outputs/'
-
+no_iterations = 50 #FOR LBP
 def compute_pairwise_weights(ref_image, pairwise_edges, beta=1.0, epsilon=1e-10):
     """
     Compute pairwise weights as beta / (Euclidean_distance + epsilon).
@@ -55,7 +59,7 @@ def compute_pairwise_weights(ref_image, pairwise_edges, beta=1.0, epsilon=1e-10)
     
     return pairwise_weights
 
-def loopy_belief_propagation(unary_potentials, pairwise_edges, pairwise_weights, height, width, n_classes, max_iter=10):
+def loopy_belief_propagation(unary_potentials, pairwise_edges, pairwise_weights, height, width, n_classes, max_iter=no_iterations):
     """
     Perform Loopy Belief Propagation for CRF inference with partial vectorization.
     
