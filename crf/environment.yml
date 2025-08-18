@@ -12,4 +12,9 @@ dependencies:
   - pydensecrf
   - dask
   - dask-jobqueue
+  - geopandas=1.0.1
+  - pandas
+  - scikit-learn
+  - seaborn
+  - tqdm
   - pip
