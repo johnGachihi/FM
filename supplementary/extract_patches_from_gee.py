@@ -59,13 +59,19 @@ def load_shapefile_as_fc(path):
     gdf = gpd.read_file(path)
     return ee.FeatureCollection(json.loads(gdf.to_json()))
 
-def extract_from_polygon(poly, image, step_deg, patch_size, ignore_value, bands):
+def extract_from_polygon(poly, image_asset_id, step_deg, patch_size, ignore_value, bands):
     # Re-initialize EE inside thread if not already done
     if not ee.data._initialized:
         ee.Initialize(credentials=get_ee_credentials(), project=gee_projectid)
 
+    image = ee.Image(image_asset_id)  # Recreate image inside function for thread safety
     region = ee.Geometry(poly['geometry'])
     label = poly['label']
+
+    # Create a mask: 1 inside polygon, 0 outside
+    mask = ee.Image(0).paint(region, 1)
+    masked_image = image.updateMask(mask)
+
     min_lon, min_lat, max_lon, max_lat = get_bbox(region)
 
     patches = []
@@ -81,25 +87,30 @@ def extract_from_polygon(poly, image, step_deg, patch_size, ignore_value, bands)
                 min_lat + (i + 1) * step_deg
             ])
             try:
-                patch = image.sampleRectangle(region=patch_geom, defaultValue=ignore_value).getInfo()
+                patch = masked_image.sampleRectangle(region=patch_geom, defaultValue=ignore_value).getInfo()
                 if patch:
                     bands_data = []
                     for b in bands:
-                        arr = np.array(patch.get(b, [[ignore_value]*patch_size]*patch_size))
+                        arr = np.array(patch['properties'].get(b, [[ignore_value] * patch_size] * patch_size))
                         if arr.shape != (patch_size, patch_size):
                             arr = np.full((patch_size, patch_size), ignore_value)
                         bands_data.append(arr)
                     stacked = np.stack(bands_data, axis=-1)
+
+                    # Optional: Skip patches that are entirely no-data (all 255 across all bands/pixels)
+                    if np.all(stacked == ignore_value):
+                        continue
+
                     patches.append({'data': stacked, 'label': label})
             except Exception as e:
-                print(f"❌ Patch error: {e}")
+                print(f"Patch error: {e}")
                 continue
 
     return patches
 
 # ----------------- MAIN EXTRACTION FUNCTION -------------------
 def extract_patches(image_asset_id, shapefile_path, patch_size=PATCH_SIZE):
-    print(f"\n📦 Processing: {image_asset_id} with labels from {shapefile_path}")
+    print(f"\n Processing: {image_asset_id} with labels from {shapefile_path}")
     
     image = ee.Image(image_asset_id)  # DO NOT SELECT BANDS
     bands = image.bandNames().getInfo()  # Get all available bands
@@ -124,7 +135,7 @@ def extract_patches(image_asset_id, shapefile_path, patch_size=PATCH_SIZE):
             executor.submit(
                 extract_from_polygon,
                 poly,
-                image,
+                image_asset_id,
                 step_deg,
                 patch_size,
                 IGNORE_VALUE,
@@ -141,13 +152,13 @@ def extract_patches(image_asset_id, shapefile_path, patch_size=PATCH_SIZE):
                     for p in patch_list:
                         patches_by_class[p['label']].append(p['data'])
             except Exception as e:
-                print(f"❌ Error during patch extraction: {e}")
+                print(f"Error during patch extraction: {e}")
 
     total_patches = sum(len(v) for v in patches_by_class.values())
-    print(f"\n✅ Total polygons processed: {total_polygons}")
-    print(f"✅ Polygons with at least one patch: {polygons_with_patches}")
-    print(f"✅ Total patches collected: {total_patches}")
-    print("✅ Patch distribution per class:")
+    print(f"\n Total polygons processed: {total_polygons}")
+    print(f"Polygons with at least one patch: {polygons_with_patches}")
+    print(f"Total patches collected: {total_patches}")
+    print("Patch distribution per class:")
     for cls in VALID_LABELS:
         print(f"  Class {cls}: {len(patches_by_class[cls])} patches")
 
