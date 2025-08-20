@@ -36,7 +36,7 @@ vector_path = f'{root}shapefiles/RWA_{season}{eyear}_Merge_v2_ValidSet.shp'
 vector_base = os.path.splitext(os.path.basename(vector_path))[0]
 reference_raster_path = f'{outpath}{vector_base}.tif'
 
-prob_threshold = 0.4
+prob_threshold = 0.0
 out_xlsx = f'{outpath}CRF_Metrics_{file_ending}_threshold_{prob_threshold}.xlsx'
 out_f1sc = f'{outpath}CRF_F1Score_{file_ending}_threshold_{prob_threshold}.png'
 out_cmat = f'{outpath}CRF_Confmat_{file_ending}_threshold_{prob_threshold}.png'
@@ -56,7 +56,7 @@ os.makedirs(outpath, exist_ok=True)
 
 def find_tiles_for_district(d: str, base: str):
     patterns = [
-        f"{base}{d}/{d}_crf_prob_tile_*.tif", # e.g. /CRF/Ruhango/Ruhango_crf_label_tile_0001.tif   
+        f"{base}{d}/{d}_crf_label_tile_*.tif", # e.g. /CRF/Ruhango/Ruhango_crf_label_tile_0001.tif   
     ]
     hits = []
     for pat in patterns:
