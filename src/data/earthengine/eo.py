@@ -236,8 +236,17 @@ def create_ee_image(
     combine_bands_function = make_combine_bands_function(ALL_DYNAMIC_IN_TIME_BANDS)
     img = ee.Image(imcoll.iterate(combine_bands_function))
 
-    return ee.Image.cat([img])
-
+    #return ee.Image.cat([img])
+    total_image_list: List[ee.Image] = [img]
+    for space_image_function in SPACE_IMAGE_FUNCTIONS:
+        total_image_list.append(
+            space_image_function(
+                region=polygon,
+                start_date=start_date - timedelta(days=31),
+                end_date=end_date + timedelta(days=31),
+            )
+        )
+    return ee.Image.cat(total_image_list)
 
 def get_ee_credentials():
     # Resolve path to project root
