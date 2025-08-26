@@ -51,9 +51,24 @@ Follow these steps to set up a **Google Cloud project**, create a **service acco
 #### 0.4 Create a service account
 
 - Open: https://console.cloud.google.com/iam-admin/serviceaccounts
-- **Create Service Account** (e.g., `gee-service-account`).
-- Grant minimum roles you need:
-  - **Writer** (read/write assets/exports): `Earth Engine Resource Writer`
+- Click **+ Create Service Account**. The interface has three steps:
+
+**Step 1 – Create service account**
+
+- **Service account name**: e.g., `gee-service-account`
+- **Service account ID**: auto-generated (e.g., `gee-service-account@gee-project-368207.iam.gserviceaccount.com`)
+- **Service account description**: optional, describe what this account will be used for (e.g., _“Earth Engine API automation”_).
+
+**Step 2 – Grant this service account access to project (Permissions)**
+
+- Assign the minimum Earth Engine role required:
+  - **Writer (read/write)**: `Earth Engine Resource Writer`
+
+**Step 3 – Grant users access to this service account (Principals)**
+
+- Optional. You can skip this if only the JSON key will be used for authentication.
+
+- Finally, click **Done**.
 
 #### 0.5 Create and download a private key (JSON)
 
