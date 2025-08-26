@@ -66,11 +66,11 @@ To avoid manual sharing, it’s recommended to **keep your assets under the same
 
 1. Open the Earth Engine Code Editor: [https://code.earthengine.google.com/](https://code.earthengine.google.com/)
 2. Go to the **Assets tab** (left panel).
-3. Locate your project folder under:
+3. Under **Cloud Assets**, locate your project folder:
    ```
-   projects/<your-project-id>/assets/
+   <your-project-id>
    ```
-   Here `<your-project-id>` is the same ID you used when registering your project in Step 0.3.
+   This folder represents your registered Cloud project.
 4. When exporting or creating assets, always place them under this project path. Example:
    ```python
    task = ee.batch.Export.image.toAsset(
@@ -81,7 +81,7 @@ To avoid manual sharing, it’s recommended to **keep your assets under the same
    ```
    This ensures assets are automatically accessible to your service account without extra sharing.
 
-> **Note**: If you don’t see a `projects/<your-project-id>/assets/` folder in the Code Editor’s Assets tab, make sure your Cloud project has been registered with Earth Engine (see Steps above).
+> **Note**: If you don’t see a `<your-project-id>` folder under **Cloud Assets** in the Assets tab, make sure your Cloud project has been registered with Earth Engine (see Steps above).
 
 #### 0.7 Point the repo to your project and key
 
