@@ -3,23 +3,21 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10.13
+  - python=3.10
   - numpy=1.26
   - pandas=1.5.3
-  - shapely=1.8.5
-  - geopandas<0.13
+  - shapely=2.0.6
+  - geopandas=0.14.*
   - gdal
   - rasterio
   - fiona
-  - h5py
   - rioxarray
+  - xarray<=2023.12.0
   - scikit-learn
   - matplotlib
-  - xarray<=2023.12.0
   - geemap
+  - h5py
   - xlsxwriter
-  - proj=9.4.1
-  - shapely=2.0.6
   - pip
   - pip:
       - torch==2.2.1
