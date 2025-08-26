@@ -5,28 +5,40 @@ import time
 from datetime import date
 import geopandas as gpd
 import ee
+import json
 from src.data.earthengine.eo import EarthEngineExporter
 
 print('Necessary libraries imported')
 
 # Parameters
-root = '/cluster01/Projects/USA_IDA_AICCRA/1.Data/FINAL/Galileo/data/'
+root = '/cluster/archiving/GIZ/data/'
+filename = 'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA'#'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA' #USe this option to download areas around training polygons (set district_level to False)
+district_level = False
 district = 'Ruhango'
-syear = 2025
-eyear = 2025
-season = 'B'
-start = date(syear, 2, 1)
-end = date(eyear, 6, 30)
+syear = 2020
+eyear = 2021
+season = 'A'
+start = date(syear, 9, 1)
+end = date(eyear, 1, 31)
+IGNORE_VALUE = '255'
 
 # Load the shapefile
-gdf = gpd.read_file(f"{root}shapefiles/rwa_adm2_selected_districts.shp")
-nyagatare_gdf = gdf[gdf['ADM2_EN'] == district]
+if district_level:
+    gdf = gpd.read_file(f"{root}shapefiles/rwa_adm2_selected_districts.shp")
+    nyagatare_gdf = gdf[gdf['ADM2_EN'] == district]
+    
+    if nyagatare_gdf.empty:
+        raise ValueError(f"{district} not found in ADM2_EN column.")
+    
+    # Extract geometry in GeoJSON format
+    aoi_geojson_geometry = nyagatare_gdf.iloc[0].geometry.__geo_interface__
 
-if nyagatare_gdf.empty:
-    raise ValueError("Nyagatare not found in ADM2_EN column.")
-
-# Extract geometry in GeoJSON format
-aoi_geojson_geometry = nyagatare_gdf.iloc[0].geometry.__geo_interface__
+elif not district_level:
+    gdf = gpd.read_file(f"{root}shapefiles/{filename}.shp")
+    gdf = gdf[gdf['code'] != 255]
+    merged_geom = gdf.unary_union  
+    aoi_geojson_geometry = merged_geom.__geo_interface__
+    #aoi_geojson_geometry = gdf.iloc[0].geometry.__geo_interface__
 
 # Initialize Earth Engine exporter
 exporter = EarthEngineExporter(mode="batch")
@@ -73,7 +85,7 @@ exporter.export_for_geo_json(
     geo_json=aoi_geojson_geometry,
     start_date=start,
     end_date=end,
-    identifier=f"{district}_{season}{eyear}"
+    identifier=filename#f"{district}_{season}{eyear}"
 )
 # Monitor task progress
 monitor_ee_tasks(poll_interval=120)

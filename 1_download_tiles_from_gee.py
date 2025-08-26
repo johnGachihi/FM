@@ -9,12 +9,12 @@ start_time = timeit.default_timer()
 season = 'B'
 eyear = 2025 #B2019
 district = 'Ruhango'
-filename = f'{district}_{season}{eyear}'
+filename = 'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONB'#f'{district}_{season}{eyear}'
 gee_projectpath = "projects/cropmapping-365811"
 gee_projectid = "cropmapping-365811"
 asset_folder = "rwanda"
 image_asset_id = f"{gee_projectpath}/assets/{asset_folder}/{filename}"
-root = '/cluster01/Projects/USA_IDA_AICCRA/1.Data/FINAL/Galileo/data/'
+root = '/cluster/archiving/GIZ/data/' #'/cluster01/Projects/USA_IDA_AICCRA/1.Data/FINAL/Galileo/data/'
 # -------------------- EE AUTH --------------------
 import os
 import json

@@ -1275,6 +1275,7 @@ class GalileoWrapper(nn.Module):
     ):
         super().__init__()
         self.encoder = Encoder.load_from_folder(pretrained_path)
+        #self.decoder = Decoder.load_from_folder(pretrained_path) #XXXXXX
         self.dim = self.encoder.embedding_size
         self.patch_size = patch_size
         self.grid_size: Optional[int] = None

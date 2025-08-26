@@ -875,4 +875,3 @@ class PixelwisePatchDataset(Dataset):
 
         return torch.tensor(image, dtype=torch.float32), torch.tensor(label_mask, dtype=torch.long)
 
-

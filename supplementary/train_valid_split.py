@@ -12,10 +12,10 @@ from pathlib import Path
 start_time = timeit.default_timer()
 
 # ───────────── USER CONFIGURATION ─────────────
-out_dir   = Path("/cluster01/Projects/USA_IDA_AICCRA/1.Data/FINAL/Galileo/data/shapefiles")
-shp_path  = "/cluster01/Projects/USA_IDA_AICCRA/1.Data/FINAL/Galileo/data/shapefiles/RWA_B2025_Merge_v2.shp"
+out_dir   = Path("/cluster/archiving/GIZ/data/shapefiles")
+shp_path  = "/cluster/archiving/GIZ/data/shapefiles/PAPER_RWA_B2025_Merge_v2.shp"
 
-train_frac   = 0.70
+train_frac   = 0.60
 buffer_dist  = 0.001# approx 111 metres
 random_state = 123
 classColumn  = "code"

@@ -1,3 +1,7 @@
+# ------------------------------------------------------------
+# Author: Benson Kenduiywo
+# Scirpt to determine a suitable threshold for low confidence pixels
+# ------------------------------------------------------------
 import os
 import rasterio
 import numpy as np
@@ -25,7 +29,7 @@ prob_thresholds = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
 valid_classes = [0, 1, 2, 3]
 nodata_value = 255
 districts = ["Ruhango", "Nyagatare", "Musanze", "Nyabihu"]
-
+cropsNames = ['Bean', 'Irish Potato', 'Maize', 'Rice']
 # ------------------------------
 # Merge Raster Probabilities
 # ------------------------------
@@ -148,7 +152,7 @@ axes[1, 0].set_title("F1 Score per Class")
 axes[1, 0].legend()
 
 # F1 mean
-f1_cols = [f"f1_class_{c}" for c in valid_classes]
+f1_cols = [f"F1_{c}" for c in cropsNames]
 results_df['f1_mean'] = results_df[f1_cols].mean(axis=1)
 sns.lineplot(ax=axes[1, 1], data=results_df, x='threshold', y='f1_mean', marker='o')
 axes[1, 1].set_title("Mean F1 Score")

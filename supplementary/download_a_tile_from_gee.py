@@ -2,12 +2,12 @@
 import timeit
 start_time = timeit.default_timer()
 # -------------------- PARAMETERS --------------------
-tile_to_download = 3  # Specify the tile ID you want
+tile_to_download = 464  # Specify the tile ID you want
 season = 'B'
 version = 'v2'
 eyear = 2025 
 district = 'Nyabihu'
-filename = f'{district}_{season}{eyear}_{version}'
+filename = 'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONB'#f'{district}_{season}{eyear}_{version}'
 gee_projectpath = "projects/cropmapping-365811"
 gee_projectid = "cropmapping-365811"
 asset_folder = "rwanda"
