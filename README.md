@@ -62,7 +62,26 @@ Follow these steps to set up a **Google Cloud project**, create a **service acco
 
 #### 0.6 Access required Earth Engine assets
 
-- Keep assets under the same **registered project** you initialized with.
+To avoid manual sharing, it’s recommended to **keep your assets under the same registered Cloud project** you initialized with:
+
+1. Open the Earth Engine Code Editor: [https://code.earthengine.google.com/](https://code.earthengine.google.com/)
+2. Go to the **Assets tab** (left panel).
+3. Locate your project folder under:
+   ```
+   projects/<your-project-id>/assets/
+   ```
+   Here `<your-project-id>` is the same ID you used when registering your project in Step 0.3.
+4. When exporting or creating assets, always place them under this project path. Example:
+   ```python
+   task = ee.batch.Export.image.toAsset(
+       image=my_image,
+       description='my_export',
+       assetId='projects/<your-project-id>/assets/my_dataset/my_asset'
+   )
+   ```
+   This ensures assets are automatically accessible to your service account without extra sharing.
+
+> **Note**: If you don’t see a `projects/<your-project-id>/assets/` folder in the Code Editor’s Assets tab, make sure your Cloud project has been registered with Earth Engine (see Steps above).
 
 #### 0.7 Point the repo to your project and key
 
