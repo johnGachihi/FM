@@ -30,10 +30,46 @@ conda activate gfm-env
 
 ### Step 0: Configure GEE
 
-- To create GEE service account see follow this [Tutorial](https://developers.google.com/earth-engine/guides/service_account).
-- Place GEE service account key in the root directory in json format.
-- Configure the ee.batch.Export.image.toAsset() function in eo.py to your corresonding GEE assetid
-- Configure the name of project ID in EE_PROJECT vairable inside src/data/config.py to match project id name.
+Follow these steps to set up a **Google Cloud project**, create a **service account with a JSON key**, and enable **Earth Engine (GEE)** for programmatic access used by the scripts in this repo.
+
+#### 0.1 Create or select a Google Cloud project
+
+- Open: https://console.cloud.google.com/projectcreate
+- Create a project (note the **Project ID**) or select an existing one from the top project picker.
+
+#### 0.2 Enable the Earth Engine API
+
+- Open: https://console.cloud.google.com/apis/library
+- Make sure the **correct project** is selected (top bar).
+- Search **Earth Engine API** → **Enable**.
+
+#### 0.3 Register the project for Earth Engine
+
+- Open: https://code.earthengine.google.com/register
+- Choose the same **Cloud project** and complete registration (Non-commercial/Commercial as appropriate).
+
+#### 0.4 Create a service account
+
+- Open: https://console.cloud.google.com/iam-admin/serviceaccounts
+- **Create Service Account** (e.g., `gee-service-account`).
+- Grant minimum roles you need:
+  - **Writer** (read/write assets/exports): `Earth Engine Resource Writer`
+
+#### 0.5 Create and download a private key (JSON)
+
+- In the service account → **Keys** tab → **Add key** → **Create new key** → **JSON** → **Create**.
+- Store the downloaded `*.json` securely (never commit it to Git).
+
+#### 0.6 Access required Earth Engine assets
+
+- Keep assets under the same **registered project** you initialized with.
+
+#### 0.7 Point the repo to your project and key
+
+- Place the JSON key at the root directory (e.g., `Root Directory/private_key.json`).
+- Update project/key references in this repo:
+  - **`src/data/config.py`**: set `EE_PROJECT = "<your-project-id>"`.
+  - **`eo.py`**: configure `ee.batch.Export.image.toAsset()` target **assetId** path(s) that match your project/folder structure.
 
 ### Step 1: Export Sentinel-1/2 Data from Earth Engine
 
