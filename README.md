@@ -37,11 +37,11 @@ Follow these steps to set up a **Google Cloud project**, create a **service acco
 - Open: https://console.cloud.google.com/projectcreate
 - Create a project (note the **Project ID**) or select an existing one from the top project picker.
 
-#### 0.2 Enable the Earth Engine API
+#### 0.2 Enable the Google Earth Engine API
 
 - Open: https://console.cloud.google.com/apis/library
 - Make sure the **correct project** is selected (top bar).
-- Search **Earth Engine API** → **Enable**.
+- Search **Google Earth Engine API** → **Enable**.
 
 #### 0.3 Register the project for Earth Engine
 
