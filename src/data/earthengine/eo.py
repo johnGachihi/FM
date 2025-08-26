@@ -171,7 +171,7 @@ def ee_safe_str(s: str):
     """Earth Engine descriptions only allow certain characters"""
     return s.replace(".", "-").replace("=", "-").replace("/", "-")[:100]
 
-
+#To change compositing days or time modify days=31 to suitable number of days.
 from dateutil.relativedelta import relativedelta
 def create_ee_image(
     polygon: ee.Geometry,
