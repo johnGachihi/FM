@@ -5,32 +5,24 @@ import ee
 
 from .utils import date_to_string
 
-# These are algorithm settings for the cloud filtering algorithm
-
-# After 2022-01-25, Sentinel-2 scenes with PROCESSING_BASELINE '04.00' or
-# above have their DN (value) range shifted by 1000. The HARMONIZED
-# collection shifts data in newer scenes to be in the same range as in older scenes.
+# Algorithm settings for the cloud filtering algorithm
 image_collection = "COPERNICUS/S2_HARMONIZED"
 
-# Ranges from 0-1.Lower value will mask more pixels out.
-# Generally 0.1-0.3 works well with 0.2 being used most commonly
+# Ranges from 0-1. Lower value will mask more pixels out.
 cloudThresh = 0.2
 # Height of clouds to use to project cloud shadows
 cloudHeights = [200, 10000, 250]
-# Sum of IR bands to include as shadows within TDOM and the
-# shadow shift method (lower number masks out less)
+# Sum of IR bands to include as shadows within TDOM and the shadow shift method
 irSumThresh = 0.3
 ndviThresh = -0.1
-# Pixels to reduce cloud mask and dark shadows by to reduce inclusion
-# of single-pixel comission errors
+# Pixels to reduce cloud mask and dark shadows by to reduce inclusion of single-pixel commission errors
 erodePixels = 1.5
 dilationPixels = 3
 
-# images with less than this many cloud pixels will be used with normal
-# mosaicing (most recent on top)
+# Images with less than this many cloud pixels will be used with normal mosaicing
 cloudFreeKeepThresh = 3
 
-# removed B1, B9, B10
+# Band configuration
 ALL_S2_BANDS = [
     "B1",
     "B2",
@@ -61,7 +53,7 @@ S2_BANDS = [
 REMOVED_BANDS = [item for item in ALL_S2_BANDS if item not in S2_BANDS]
 S2_SHIFT_VALUES = [float(0.0)] * len(S2_BANDS)
 S2_DIV_VALUES = [float(1e4)] * len(S2_BANDS)
-
+NODATA_VALUE = -9999  # Define NODATA value to match patch extraction script
 
 def get_single_s2_image(region: ee.Geometry, start_date: date, end_date: date) -> ee.Image:
     dates = ee.DateRange(
@@ -82,9 +74,11 @@ def get_single_s2_image(region: ee.Geometry, start_date: date, end_date: date) -
         .sort("CLOUDY_PIXEL_PERCENTAGE")
     )
 
-    # has to be double to be compatible with the sentinel 1 imagery, which is in
-    # float64
+    # Merge collection and set NODATA to -9999
     cloudFree = mergeCollection(imgC).select(S2_BANDS).toDouble()
+    
+    # Replace masked pixels with NODATA_VALUE (-9999)
+    cloudFree = cloudFree.unmask(NODATA_VALUE)
 
     return cloudFree
 
@@ -114,12 +108,7 @@ def computeS2CloudScore(img):
 
     toa = toa.addBands(img.select(["QA60"]))
 
-    # ['QA60', 'B1','B2',    'B3',    'B4',   'B5','B6','B7', 'B8','  B8A',
-    #  'B9',          'B10', 'B11','B12']
-    # ['QA60','cb', 'blue', 'green', 'red', 're1','re2','re3','nir', 'nir2',
-    #  'waterVapor', 'cirrus','swir1', 'swir2']);
-
-    # Compute several indicators of cloudyness and take the minimum of them.
+    # Compute several indicators of cloudiness and take the minimum of them.
     score = ee.Image(1)
 
     # Clouds are reasonably bright in the blue and cirrus bands.
@@ -141,7 +130,6 @@ def computeS2CloudScore(img):
     # Clip the lower end of the score
     score = score.max(ee.Image(0.001))
 
-    # score = score.multiply(dilated)
     score = score.reduceNeighborhood(reducer=ee.Reducer.mean(), kernel=ee.Kernel.square(5))
 
     return img.addBands(score.rename("cloudScore"))
@@ -166,16 +154,14 @@ def projectShadows(image):
     darkPixelMask = darkPixelMask.And(cloudMask.Not())
 
     # Find where cloud shadows should be based on solar geometry
-    # Convert to radians
     azR = ee.Number(meanAzimuth).add(180).multiply(math.pi).divide(180.0)
     zenR = ee.Number(meanZenith).multiply(math.pi).divide(180.0)
 
-    # Find the shadows
     def getShadows(cloudHeight):
         cloudHeight = ee.Number(cloudHeight)
 
         shadowCastedDistance = zenR.tan().multiply(cloudHeight)  # Distance shadow is cast
-        x = azR.sin().multiply(shadowCastedDistance).multiply(-1)  # /X distance of shadow
+        x = azR.sin().multiply(shadowCastedDistance).multiply(-1)  # X distance of shadow
         y = azR.cos().multiply(shadowCastedDistance).multiply(-1)  # Y distance of shadow
         return image.select(["cloudScore"]).displace(
             ee.Image.constant(x).addBands(ee.Image.constant(y))
@@ -195,9 +181,8 @@ def projectShadows(image):
     return image.addBands(shadowScore.rename(["shadowScore"]))
 
 
-def dilatedErossion(score):
+def dilatedErossion( score):
     # Perform opening on the cloud scores
-
     def erode(img, distance):
         d = (
             img.Not()
@@ -220,4 +205,8 @@ def dilatedErossion(score):
 
 
 def mergeCollection(imgC):
-    return imgC.qualityMosaic("cloudShadowScore")
+    # Quality mosaic based on cloudShadowScore
+    merged = imgC.qualityMosaic("cloudShadowScore")
+    
+    # Ensure masked pixels are set to NODATA_VALUE (-9999)
+    return merged.unmask(NODATA_VALUE)
