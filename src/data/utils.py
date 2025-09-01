@@ -30,7 +30,7 @@ from src.data.earthengine.eo import (
 )
 from src.masking import MaskedOutput
 
-DEFAULT_MONTH = 5
+DEFAULT_MONTH = 5 #Change the number of MONTHS are more or less
 
 
 def construct_galileo_input(
