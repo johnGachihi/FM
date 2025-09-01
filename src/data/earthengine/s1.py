@@ -10,7 +10,7 @@ S1_BANDS = ["VV", "VH"]
 # EarthEngine estimates Sentinel-1 values range from -50 to 1
 S1_SHIFT_VALUES = [25.0, 25.0]
 S1_DIV_VALUES = [25.0, 25.0]
-
+NODATA_VALUE = -9999  # Define NODATA value to match patch extraction script
 
 def get_s1_image_collection(
     region: ee.Geometry, start_date: date, end_date: date
@@ -25,10 +25,8 @@ def get_s1_image_collection(
 
     s1 = ee.ImageCollection(image_collection).filterDate(startDate, endDate).filterBounds(region)
 
-    # different areas have either ascending, descending coverage or both.
-    # https://sentinel.esa.int/web/sentinel/missions/sentinel-1/observation-scenario
-    # we want the coverage to be consistent (so don't want to take both) but also want to
-    # take whatever is available
+    # Different areas have either ascending, descending coverage or both.
+    # We want consistent coverage, so select based on the orbit of the first image.
     orbit = s1.filter(
         ee.Filter.eq("orbitProperties_pass", s1.first().get("orbitProperties_pass"))
     ).filter(ee.Filter.eq("instrumentMode", "IW"))
@@ -58,6 +56,7 @@ def get_single_s1_image(
         ]
     ).clip(region)
 
-    # rename to the bands
-    final_composite = composite.select(S1_BANDS)
+    # Rename to the bands and ensure masked pixels are set to NODATA_VALUE (-9999)
+    final_composite = composite.select(S1_BANDS).unmask(NODATA_VALUE)
+
     return final_composite

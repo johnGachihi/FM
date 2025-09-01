@@ -8,7 +8,7 @@ image_collection = "IDAHO_EPSCOR/TERRACLIMATE"
 TC_BANDS = ["def", "soil", "aet"]
 TC_SHIFT_VALUES = [0.0, 0.0, 0.0]
 TC_DIV_VALUES = [4548, 8882, 2000]
-
+NODATA_VALUE = -9999  # Define NODATA value to match patch extraction script
 
 def get_terraclim_image_collection(
     region: ee.Geometry, start_date: date, end_date: date
@@ -29,8 +29,10 @@ def get_single_terraclimate_image(
 ) -> ee.Image:
     mid_date = start_date + ((end_date - start_date) / 2)
 
-    # most of the time this should be within the month. If terraclim has not been
-    # updated yet this will just yield the most recent data.
+    # Select the image closest to the mid_date, clip to region, and select bands
     kept_tc = get_closest_dates(mid_date, tc_imcol).first().clip(region).select(TC_BANDS)
-    kept_tc = kept_tc.unmask(0)
+    
+    # Replace masked pixels with NODATA_VALUE (-9999)
+    kept_tc = kept_tc.unmask(NODATA_VALUE)
+    
     return kept_tc.toDouble()
