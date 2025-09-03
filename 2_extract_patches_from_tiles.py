@@ -20,10 +20,10 @@ root = '/cluster/archiving/GIZ/'
 TILE_ROOTS = [ 
     ("PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA", f"{root}data/PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA_tiles"),
     ("PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONB", f"{root}data/PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONB_tiles"),
-    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Ruhango_B2025_v2_tiles"),
-    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Musanze_B2025_v2_tiles"),
-    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Nyabihu_B2025_v2_tiles"),
-    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Nyagatare_B2025_v2_tiles"),
+    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Ruhango_B2025_tiles"),
+    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Musanze_B2025_tiles"),
+    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Nyabihu_B2025_tiles"),
+    ("PAPER_RWA_B2025_Merge_v2_TrainSet", f"{root}data/Nyagatare_B2025_tiles"),
     #("2020_RWA_WAPOR_POLY_111_MERGED_SEASONA_Nyagatare", f"{root}data/Nyagatare_A2021_tiles"), #Collected between 2020-11-30 to 1st December 2020
     #("2021_RWA_WAPOR_POLY_111_MERGED_SEASONB_Nyagatare", f"{root}data/Nyagatare_B2021_tiles"),
     #("Nyagatare_A2019", f"{root}data/Nyagatare_A2019_tiles"),
@@ -38,15 +38,16 @@ SHAPEFILE_DIR = f"{root}data/shapefiles"
 LABEL_COLUMN = "code"
 VALID_LABELS = {0, 1, 2, 3, 4, 5, 6}  # 7 classes: banana, bean, irish potato, maize, rice, sorghum, soybean
 OUTPUT_DIR = f"{root}data/WC/"
-PATCH_SIZE = 8
-STRIDE = 4
+PATCH_SIZE = 16#8
+STRIDE = 8#4
 IGNORE_VALUE = 255
 NODATA_VALUE = -9999
+FALLBACK_MEDIAN = -9999
 SKIP_SINGLE_CLASS_PATCHES = False
 NUM_WORKERS = multiprocessing.cpu_count() - 10
-SPLIT_RATIOS = {"train": 0.6, "val": 0.4}
+SPLIT_RATIOS = {"train": 0.7, "val": 0.3}
 SEED = 42
-PRATIO = 0.05 # Pixel percentage with valid data or labels
+PRATIO = 0.04 # Pixel percentage with valid data or labels
 random.seed(SEED)
 
 # --------------------- TILE PROCESSING FUNCTION ---------------------
@@ -64,12 +65,22 @@ def process_tile(tile_path, vector_path):
             # Read full image to compute band-wise medians
             full_image = src.read()  # [C, H, W]
             band_medians = np.array([
-                np.median(full_image[i][full_image[i] != NODATA_VALUE]) 
+                np.nanmedian(full_image[i][full_image[i] != NODATA_VALUE])
+                if np.any(full_image[i] != NODATA_VALUE) else FALLBACK_MEDIAN
                 for i in range(full_image.shape[0])
             ])
 
+            # Check for NaN in band_medians and log problematic tiles
+            if np.any(np.isnan(band_medians)):
+                print(f"  Warning: Tile {os.path.basename(tile_path)} has bands with all NODATA values. Skipping.")
+                return result, local_distribution, multi_label_count
+
             gdf = gpd.read_file(vector_path).to_crs(crs)
             gdf = gdf[gdf.geometry.is_valid & gdf[LABEL_COLUMN].isin(VALID_LABELS)]
+            if gdf.empty:
+                print(f"  Warning: No valid geometries or labels in {vector_path} for {os.path.basename(tile_path)}")
+                return result, local_distribution, multi_label_count
+
             label_shapes = (
                 (geom, int(attr)) for geom, attr in zip(gdf.geometry, gdf[LABEL_COLUMN])
             )
@@ -115,13 +126,13 @@ def process_tile(tile_path, vector_path):
                         label_patch != IGNORE_VALUE
                     ) / (PATCH_SIZE * PATCH_SIZE)
 
-                    if image_valid_ratio < PRATIO or label_valid_ratio < PRATIO:
+                    if label_valid_ratio < PRATIO:
                         continue
 
                     # Replace NODATA_VALUE with band-wise medians
                     for i in range(image_patch.shape[0]):
-                        image_patch[i][image_patch[i] == NODATA_VALUE] = 0#band_medians[i]
-                    
+                        image_patch[i][image_patch[i] == NODATA_VALUE] = band_medians[i]
+
                     valid_pixels = label_patch[label_patch != IGNORE_VALUE]
                     if len(valid_pixels) == 0:
                         continue
@@ -210,6 +221,10 @@ def main():
     # SAVE PATCHES
     for split, items in balanced_splits.items():
         for i, (image, label) in enumerate(items):
+            # Check for NaN in image patch before saving
+            if np.any(np.isnan(image)):
+                print(f"  Warning: Patch {split}_{i:05d} contains NaN values. Skipping.")
+                continue
             out_path = os.path.join(
                 OUTPUT_DIR, split, f"patch_{split}_{i:05d}.npz"
             )

@@ -12,14 +12,14 @@ print('Necessary libraries imported')
 
 # Parameters
 root = '/cluster/archiving/GIZ/data/'
-filename = 'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA'#'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA' #USe this option to download areas around training polygons (set district_level to False)
 district_level = False
-district = 'Ruhango'
-syear = 2020
+district = 'Nyagatare'
+syear = 2021
 eyear = 2021
-season = 'A'
-start = date(syear, 9, 1)
-end = date(eyear, 1, 31)
+season = 'B'
+start = date(syear, 2, 1)
+end = date(eyear, 6, 30)
+filename = 'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA'#f'{district}_{season}{eyear}'#USe this option to download areas around training polygons (set district_level to False)
 IGNORE_VALUE = '255'
 
 # Load the shapefile

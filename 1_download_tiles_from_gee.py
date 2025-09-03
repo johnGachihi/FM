@@ -6,15 +6,16 @@
 import timeit
 start_time = timeit.default_timer()
 # -------------------- PARAMETERS --------------------
-season = 'B'
-eyear = 2025 #B2019
-district = 'Ruhango'
-filename = 'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONB'#f'{district}_{season}{eyear}'
+season = 'A'
+eyear = 2019 
+district = 'Nyagatare'
+filename = 'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONA'#f'{district}_{season}{eyear}'#'PAPER_2021_RWA_WAPOR_POLY_111_MERGED_SEASONB'#
 gee_projectpath = "projects/cropmapping-365811"
 gee_projectid = "cropmapping-365811"
 asset_folder = "rwanda"
 image_asset_id = f"{gee_projectpath}/assets/{asset_folder}/{filename}"
 root = '/cluster/archiving/GIZ/data/' #'/cluster01/Projects/USA_IDA_AICCRA/1.Data/FINAL/Galileo/data/'
+NODATA_VALUE = -9999
 # -------------------- EE AUTH --------------------
 import os
 import json
@@ -111,18 +112,22 @@ for i, row in tqdm(gdf.iterrows(), total=len(gdf)):
     coords = tile_geom.exterior.coords[:]
     ee_geom = ee.Geometry.Polygon(coords)
 
-    clipped = image.clip(ee_geom)
+    # Set NoData by unmasking all masked pixels to -9999
+    clipped = image.unmask(NODATA_VALUE).clip(ee_geom)
 
     try:
         url = clipped.getDownloadURL({
             "region": ee_geom,
             "scale": RESOLUTION,
             "format": "GeoTIFF"
+            # Note: no "nodata" key here; it's handled by unmask()
         })
 
         out_path = os.path.join(OUTPUT_DIR, f"tile_{row.tile_id:04d}.tif")
         geemap.download_file(url, out_path)
+
     except Exception as e:
         print(f"[{row.tile_id}] Skipped due to error: {e}")
 
 print("Done! Elapsed time (hours):", (timeit.default_timer() - start_time) / 3600.0)
+
