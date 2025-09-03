@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 file_ending = 'SB_with_2025' #SB_with_2025.log or allseasons_with_2025.log finetune_WC_SA.log
 log_file = f'finetune_{file_ending}.log'  # <-- Replace with your actual log file pathFM/GFM_Galileo/finetune_allseasons_with_2025.log
 root = '/cluster/archiving/GIZ/accuracy/'
-output_filename = f'{root}/Galileo_GFM_training_{file_ending}.png'
-output_csv = f'{root}/Galileo_GFM_training_{file_ending}.csv'
+output_filename = f'{root}Galileo_GFM_training_{file_ending}.png'
+output_csv = f'{root}Galileo_GFM_training_{file_ending}.csv'
 
 pattern = re.compile(
     r"\[Epoch (\d+)\] LR: ([0-9.]+), Train Loss = ([0-9.]+), Train Acc = ([0-9.]+), Val Acc = ([0-9.]+), Val mIoU = ([0-9.]+)"

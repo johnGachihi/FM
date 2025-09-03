@@ -6,11 +6,10 @@
 import timeit
 start_time = timeit.default_timer()
 # -------------------- USER PARAMS --------------------
-season = 'B'
-eyear = 2025
-version ='v2'
-district = 'Musanze'
-filename = f'{district}_{season}{eyear}_{version}'
+season = 'A'
+eyear = 2021
+district = 'Nyagatare'
+filename = f'{district}_{season}{eyear}'
 gee_projectpath = "projects/cropmapping-365811"
 gee_projectid = "cropmapping-365811"
 asset_folder = "rwanda"
@@ -26,7 +25,7 @@ MAX_WORKERS = 6            # parallel threads (start with 4–8)
 MAX_RETRIES = 4            # per tile
 BASE_SLEEP = 3.0           # seconds; backoff = BASE_SLEEP * (2**(attempt-1))
 SKIP_EXISTING_VALID = True
-
+NODATA_VALUE = -9999
 # -------------------- IMPORTS --------------------
 import os
 import json
@@ -111,16 +110,17 @@ def log(msg):
 
 def download_with_retries(tile_id, ee_image, ee_geom, out_path, scale, crs):
     last_err = None
+    clipped  = ee_image.unmask(NODATA_VALUE).clip(ee_geom)
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             # Fresh URL each attempt
-            url = ee_image.getDownloadURL({
+            url = clipped.getDownloadURL({
                 "region": ee_geom,
                 "scale": scale,
                 "format": "GeoTIFF",
                 "crs": crs,
             })
-            geemap.download_file(url, out_path)
+            geemap.download_file(url, out_path, overwrite=True)
 
             ok, reason = validate_geotiff(out_path)
             if ok:
