@@ -9,14 +9,14 @@ import dateutil.tz
 import numpy as np
 import torch
 
-from .config import DEFAULT_SEED
-from .data.dataset import (
+from src.config import DEFAULT_SEED
+from src.data.dataset import (
     SPACE_BAND_GROUPS_IDX,
     SPACE_TIME_BANDS_GROUPS_IDX,
     STATIC_BAND_GROUPS_IDX,
     TIME_BAND_GROUPS_IDX,
 )
-from .masking import MASKING_MODES, MaskedOutput
+from src.masking import MASKING_MODES, MaskedOutput
 
 data_dir = Path(__file__).parent.parent / "data"
 logging_dir = Path(__file__).parent.parent / "logs"

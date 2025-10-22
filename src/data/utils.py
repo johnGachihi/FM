@@ -1,4 +1,4 @@
-from typing import cast
+from typing import cast, Optional
 
 import torch
 
@@ -34,17 +34,17 @@ DEFAULT_MONTH = 5 #Change the number of MONTHS are more or less
 
 
 def construct_galileo_input(
-    s1: torch.Tensor | None = None,  # [H, W, T, D]
-    s2: torch.Tensor | None = None,  # [H, W, T, D]
-    era5: torch.Tensor | None = None,  # [T, D]
-    tc: torch.Tensor | None = None,  # [T, D]
-    viirs: torch.Tensor | None = None,  # [T, D]
-    srtm: torch.Tensor | None = None,  # [H, W, D]
-    dw: torch.Tensor | None = None,  # [H, W, D]
-    wc: torch.Tensor | None = None,  # [H, W, D]
-    landscan: torch.Tensor | None = None,  # [D]
-    latlon: torch.Tensor | None = None,  # [D]
-    months: torch.Tensor | None = None,  # [T]
+    s1: Optional[torch.Tensor] = None,  # [H, W, T, D]
+    s2: Optional[torch.Tensor] = None,  # [H, W, T, D]
+    era5: Optional[torch.Tensor] = None,  # [T, D]
+    tc: Optional[torch.Tensor] = None,  # [T, D]
+    viirs: Optional[torch.Tensor] = None,  # [T, D]
+    srtm: Optional[torch.Tensor] = None,  # [H, W, D]
+    dw: Optional[torch.Tensor] = None,  # [H, W, D]
+    wc: Optional[torch.Tensor] = None,  # [H, W, D]
+    landscan: Optional[torch.Tensor] = None,  # [D]
+    latlon: Optional[torch.Tensor] = None,  # [D]
+    months: Optional[torch.Tensor] = None,  # [T]
     normalize: bool = False,
 ):
     space_time_inputs = [s1, s2]
